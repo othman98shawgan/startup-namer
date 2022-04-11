@@ -12,12 +12,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Startup Name Generator',
-      theme: ThemeData(
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-        ),
-      ),
+      theme: ThemeData(primarySwatch: Colors.deepPurple),
       home: const RandomWords(),
     );
   }
@@ -54,8 +49,8 @@ class _RandomWordsState extends State<RandomWords> {
         style: _biggerFont,
       ),
       trailing: Icon(
-        alreadySaved ? Icons.favorite : Icons.favorite_border,
-        color: alreadySaved ? Colors.red : null,
+        alreadySaved ? Icons.star : Icons.star_border,
+        color: alreadySaved ? Colors.deepPurple : null,
         semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
       ),
       onTap: () {
@@ -77,9 +72,14 @@ class _RandomWordsState extends State<RandomWords> {
         title: const Text('Startup Name Generator'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.list),
+            icon: const Icon(Icons.star),
             onPressed: _pushSaved,
             tooltip: 'Saved Suggestions',
+          ),
+          IconButton(
+            icon: const Icon(Icons.login),
+            onPressed: _pushSaved,
+            tooltip: 'Login',
           ),
         ],
       ),
@@ -93,10 +93,38 @@ class _RandomWordsState extends State<RandomWords> {
         builder: (context) {
           final tiles = _saved.map(
             (pair) {
-              return ListTile(
-                title: Text(
-                  pair.asPascalCase,
-                  style: _biggerFont,
+              return Dismissible(
+                key: ValueKey(pair),
+                confirmDismiss: (direction) async {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('“Deletion is not implemented yet')));
+                  return null;
+                },
+                // onDismissed: (direction) {
+                //   setState(() {
+                //     _saved.remove(pair);
+                //   });
+                //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                //       content: Text('“Deletion is not implemented yet')));
+                // },
+                background: Container(
+                  color: Colors.deepPurple,
+                  child: Padding(
+                    padding: const EdgeInsets.all(15),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete, color: Colors.white),
+                        const Text('Delete Suggestion',
+                            style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+                child: ListTile(
+                  title: Text(
+                    pair.asPascalCase,
+                    style: _biggerFont,
+                  ),
                 ),
               );
             },
@@ -118,6 +146,8 @@ class _RandomWordsState extends State<RandomWords> {
       ),
     );
   }
+
+  void _pushLogin() {}
 }
 
 class RandomWords extends StatefulWidget {
