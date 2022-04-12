@@ -18,6 +18,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class RandomWords extends StatefulWidget {
+  const RandomWords({Key? key}) : super(key: key);
+  @override
+  _RandomWordsState createState() => _RandomWordsState();
+}
+
 class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
   final _saved = <WordPair>{};
@@ -78,7 +84,7 @@ class _RandomWordsState extends State<RandomWords> {
           ),
           IconButton(
             icon: const Icon(Icons.login),
-            onPressed: _pushSaved,
+            onPressed: _pushLogin,
             tooltip: 'Login',
           ),
         ],
@@ -97,7 +103,7 @@ class _RandomWordsState extends State<RandomWords> {
                 key: ValueKey(pair),
                 confirmDismiss: (direction) async {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('“Deletion is not implemented yet')));
+                      content: Text('Deletion is not implemented yet')));
                   return null;
                 },
                 // onDismissed: (direction) {
@@ -112,9 +118,9 @@ class _RandomWordsState extends State<RandomWords> {
                   child: Padding(
                     padding: const EdgeInsets.all(15),
                     child: Row(
-                      children: [
-                        const Icon(Icons.delete, color: Colors.white),
-                        const Text('Delete Suggestion',
+                      children: const [
+                        Icon(Icons.delete, color: Colors.white),
+                        Text('Delete Suggestion',
                             style: TextStyle(color: Colors.white)),
                       ],
                     ),
@@ -147,11 +153,61 @@ class _RandomWordsState extends State<RandomWords> {
     );
   }
 
-  void _pushLogin() {}
-}
+  void _pushLogin() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (context) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Login'),
+          ),
+          body: Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 20, left: 20, right: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    "Welcome to Startup Names Generator, please log in below",
+                  ),
+                  emailForm(),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  passwordForm(),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  submit()
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
 
-class RandomWords extends StatefulWidget {
-  const RandomWords({Key? key}) : super(key: key);
-  @override
-  _RandomWordsState createState() => _RandomWordsState();
+  Widget submit() {
+    return MaterialButton(
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Login is not implemented yet')));
+        },
+        color: Colors.purple,
+        textColor: Colors.white,
+        child: Text("Log in"));
+  }
+
+  Widget emailForm() {
+    return TextFormField(
+      decoration: const InputDecoration(hintText: "Email"),
+    );
+  }
+
+  Widget passwordForm() {
+    return TextFormField(
+      obscureText: true,
+      decoration: const InputDecoration(hintText: "Password"),
+    );
+  }
 }
