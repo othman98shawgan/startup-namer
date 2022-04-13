@@ -1,6 +1,8 @@
 import 'package:english_words/english_words.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:startup_namer/app_user.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +54,31 @@ class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
   final _saved = <WordPair>{};
   final _biggerFont = const TextStyle(fontSize: 18);
+  var user;
+
+  @override
+  Widget build(BuildContext context) {
+    //user = Provider.of<AppUser>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Startup Name Generator'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.star),
+            onPressed: _pushSaved,
+            tooltip: 'Saved Suggestions',
+          ),
+          IconButton(
+            icon: const Icon(Icons.login),
+            onPressed: _pushLogin,
+            tooltip: 'Login',
+          ),
+        ],
+      ),
+      body: _buildSuggestions(),
+    );
+  }
 
   Widget _buildSuggestions() {
     return ListView.builder(
@@ -95,28 +122,6 @@ class _RandomWordsState extends State<RandomWords> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Startup Name Generator'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.star),
-            onPressed: _pushSaved,
-            tooltip: 'Saved Suggestions',
-          ),
-          IconButton(
-            icon: const Icon(Icons.login),
-            onPressed: _pushLogin,
-            tooltip: 'Login',
-          ),
-        ],
-      ),
-      body: _buildSuggestions(),
-    );
-  }
-
   void _pushSaved() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -126,17 +131,12 @@ class _RandomWordsState extends State<RandomWords> {
               return Dismissible(
                 key: ValueKey(pair),
                 confirmDismiss: (direction) async {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Deletion is not implemented yet')));
-                  return null;
+                  return await confirmDeletion(pair);
                 },
-                // onDismissed: (direction) {
-                //   setState(() {
-                //     _saved.remove(pair);
-                //   });
-                //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                //       content: Text('“Deletion is not implemented yet')));
-                // },
+                onDismissed: (dir) {
+                  //user.removePair(pair.first, pair.second);
+                  _saved.remove(pair);
+                },
                 background: Container(
                   color: Colors.deepPurple,
                   child: Padding(
@@ -175,6 +175,42 @@ class _RandomWordsState extends State<RandomWords> {
         },
       ),
     );
+  }
+
+  Future<bool> confirmDeletion(WordPair pair) async {
+    bool toDelete = false;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Delete Suggestion"),
+          content: Text(
+              "Are you sure you want to delete ${pair.asPascalCase} from your saved suggestions?"),
+          actions: [
+            TextButton(
+              child: const Text("Yes"),
+              onPressed: () {
+                toDelete = true;
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                  primary: Colors.white, backgroundColor: Colors.deepPurple),
+            ),
+            TextButton(
+              child: const Text("No"),
+              onPressed: () {
+                toDelete = false;
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                  primary: Colors.white, backgroundColor: Colors.deepPurple),
+            )
+          ],
+        );
+      },
+    );
+    return toDelete;
   }
 
   void _pushLogin() {
