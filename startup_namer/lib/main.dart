@@ -1,12 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:startup_namer/app_user.dart';
+//import 'package:startup_namer/app_user.dart';
+import 'package:startup_namer/auth.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  await Firebase.initializeApp();
+  //runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class App extends StatelessWidget {
@@ -24,7 +28,7 @@ class App extends StatelessWidget {
                         textDirection: TextDirection.ltr)));
           }
           if (snapshot.connectionState == ConnectionState.done) {
-            return MyApp();
+            return const MyApp();
           }
           return Center(child: CircularProgressIndicator());
         });
@@ -36,10 +40,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Startup Name Generator',
-      theme: ThemeData(primarySwatch: Colors.deepPurple),
-      home: const RandomWords(),
+    return ChangeNotifierProvider(
+      create: (_) => AuthRepository.instance(),
+      child: Consumer<AuthRepository>(
+        builder: (context, authRepository, _) => MaterialApp(
+          title: 'Startup Name Generator',
+          theme: ThemeData(primarySwatch: Colors.deepPurple),
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const RandomWords(),
+            '/login': (context) => const Login(),
+          },
+        ),
+      ),
     );
   }
 }
@@ -54,11 +67,26 @@ class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
   final _saved = <WordPair>{};
   final _biggerFont = const TextStyle(fontSize: 18);
-  var user;
+  var _user;
 
   @override
   Widget build(BuildContext context) {
-    //user = Provider.of<AppUser>(context);
+    _user = Provider.of<AuthRepository>(context);
+
+    var signedInOutIcon = _user.status == Status.Authenticated
+        ? const Icon(Icons.exit_to_app)
+        : const Icon(Icons.login);
+
+    var signedInOutIconMethod = _user.status == Status.Authenticated
+        ? (() async {
+            await _user.signOut();
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Successfully logged out')));
+          })
+        : (() => Navigator.pushNamed(context, '/login'));
+
+    var signedInOutTooltip =
+        _user.status == Status.Authenticated ? 'Logout' : 'Login';
 
     return Scaffold(
       appBar: AppBar(
@@ -70,9 +98,9 @@ class _RandomWordsState extends State<RandomWords> {
             tooltip: 'Saved Suggestions',
           ),
           IconButton(
-            icon: const Icon(Icons.login),
-            onPressed: _pushLogin,
-            tooltip: 'Login',
+            icon: signedInOutIcon,
+            onPressed: signedInOutIconMethod,
+            tooltip: signedInOutTooltip,
           ),
         ],
       ),
@@ -212,62 +240,79 @@ class _RandomWordsState extends State<RandomWords> {
     );
     return toDelete;
   }
+}
 
-  void _pushLogin() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (context) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Login'),
-          ),
-          body: Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 20, left: 20, right: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "Welcome to Startup Names Generator, please log in below",
-                  ),
-                  emailForm(),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  passwordForm(),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  submit()
-                ],
+class Login extends StatefulWidget {
+  const Login({Key? key}) : super(key: key);
+
+  @override
+  _LoginState createState() => _LoginState();
+}
+
+class _LoginState extends State<Login> {
+  @override
+  Widget build(BuildContext context) {
+    final user = Provider.of<AuthRepository>(context);
+    TextEditingController _email = TextEditingController(text: "");
+    TextEditingController _password = TextEditingController(text: "");
+
+    var submit = user.status == Status.Authenticating
+        ? const Center(
+            child: CircularProgressIndicator(),
+          )
+        : MaterialButton(
+            onPressed: () async {
+              if (!await user.signIn(_email.text, _password.text)) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('There was an error logging into the app')));
+              } else {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Successfully logged in')));
+              }
+            },
+            color: Colors.deepPurple,
+            elevation: 5.0,
+            child: const Text('Log in',
+                style: TextStyle(fontSize: 20, color: Colors.white)),
+          );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Login'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Container(
+          margin: const EdgeInsets.only(top: 30, left: 20, right: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              const Text(
+                "Welcome to Startup Names Generator \n Please log in below",
+                style: TextStyle(
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _email,
+                obscureText: false,
+                decoration: const InputDecoration(hintText: "Email"),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _password,
+                obscureText: true,
+                decoration: const InputDecoration(hintText: "Password"),
+              ),
+              const SizedBox(height: 20),
+              submit
+            ],
           ),
-        );
-      }),
-    );
-  }
-
-  Widget submit() {
-    return MaterialButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Login is not implemented yet')));
-        },
-        color: Colors.purple,
-        textColor: Colors.white,
-        child: Text("Log in"));
-  }
-
-  Widget emailForm() {
-    return TextFormField(
-      decoration: const InputDecoration(hintText: "Email"),
-    );
-  }
-
-  Widget passwordForm() {
-    return TextFormField(
-      obscureText: true,
-      decoration: const InputDecoration(hintText: "Password"),
+        ),
+      ),
     );
   }
 }
