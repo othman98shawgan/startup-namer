@@ -65,7 +65,7 @@ class RandomWords extends StatefulWidget {
 
 class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
-  final _saved = <WordPair>{};
+  var _saved = <WordPair>[];
   final _biggerFont = const TextStyle(fontSize: 18);
   var _user;
 
@@ -126,7 +126,8 @@ class _RandomWordsState extends State<RandomWords> {
   }
 
   Widget _buildRow(WordPair pair) {
-    final alreadySaved = _saved.contains(pair);
+    //final alreadySaved = _saved.contains(pair);
+    final alreadySaved = _user.starred.contains(pair);
 
     return ListTile(
       title: Text(
@@ -138,14 +139,12 @@ class _RandomWordsState extends State<RandomWords> {
         color: alreadySaved ? Colors.deepPurple : null,
         semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
       ),
-      onTap: () {
-        setState(() {
-          if (alreadySaved) {
-            _saved.remove(pair);
-          } else {
-            _saved.add(pair);
-          }
-        });
+      onTap: () async {
+        if (alreadySaved) {
+          await _user.removePair(pair);
+        } else {
+          await _user.addPair(pair);
+        }
       },
     );
   }
@@ -154,35 +153,15 @@ class _RandomWordsState extends State<RandomWords> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) {
-          final tiles = _saved.map(
+          //var favorites = _saved; //idk
+          _saved = _user.starred;
+          var favorites = _saved;
+          final tiles = favorites.map(
             (pair) {
-              return Dismissible(
-                key: ValueKey(pair),
-                confirmDismiss: (direction) async {
-                  return await confirmDeletion(pair);
-                },
-                onDismissed: (dir) {
-                  //user.removePair(pair.first, pair.second);
-                  _saved.remove(pair);
-                },
-                background: Container(
-                  color: Colors.deepPurple,
-                  child: Padding(
-                    padding: const EdgeInsets.all(15),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.delete, color: Colors.white),
-                        Text('Delete Suggestion',
-                            style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                  ),
-                ),
-                child: ListTile(
-                  title: Text(
-                    pair.asPascalCase,
-                    style: _biggerFont,
-                  ),
+              return ListTile(
+                title: Text(
+                  pair.asPascalCase,
+                  style: _biggerFont,
                 ),
               );
             },
@@ -198,7 +177,37 @@ class _RandomWordsState extends State<RandomWords> {
             appBar: AppBar(
               title: const Text('Saved Suggestions'),
             ),
-            body: ListView(children: divided),
+            body: ListView.builder(
+              itemCount: divided.length,
+              itemBuilder: (context, index) {
+                var pair = _user.starred.toList()[index];
+                return Dismissible(
+                  key: UniqueKey(),
+                  child: divided[index],
+                  onDismissed: (dir) async {
+                    await _user.removePair(pair);
+                  },
+                  confirmDismiss: (dir) async {
+                    return await confirmDeletion(pair);
+                  },
+                  background: Container(
+                    child: Row(
+                      children: const [
+                        Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                        Text(
+                          'Delete Suggestion',
+                          style: TextStyle(color: Colors.white, fontSize: 17),
+                        )
+                      ],
+                    ),
+                    color: Colors.deepPurple,
+                  ),
+                );
+              },
+            ),
           );
         },
       ),
