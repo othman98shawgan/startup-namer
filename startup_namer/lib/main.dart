@@ -262,29 +262,140 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthRepository>(context);
+
     TextEditingController _email = TextEditingController(text: "");
     TextEditingController _password = TextEditingController(text: "");
+    TextEditingController _confirm = TextEditingController(text: "");
+    var _validate = true;
 
-    var submit = user.status == Status.Authenticating
+    var signInButton = user.status == Status.Authenticating
         ? const Center(
             child: CircularProgressIndicator(),
           )
         : MaterialButton(
+            minWidth: 300.0,
+            height: 35.0,
             onPressed: () async {
               if (!await user.signIn(_email.text, _password.text)) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('There was an error logging into the app')));
+                printSanckBar('There was an error logging into the app');
               } else {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Successfully logged in')));
+                printSanckBar('Successfully logged in');
               }
             },
             color: Colors.deepPurple,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18.0),
+                side: const BorderSide(color: Colors.deepPurple)),
             elevation: 5.0,
             child: const Text('Log in',
                 style: TextStyle(fontSize: 20, color: Colors.white)),
           );
+
+    var signUpButton = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: ButtonTheme(
+        minWidth: 300.0,
+        height: 35.0,
+        child: RaisedButton(
+          color: Colors.blue,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18.0),
+              side: const BorderSide(color: Colors.blue)),
+          onPressed: () async {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (BuildContext context) {
+                return AnimatedPadding(
+                  padding: MediaQuery.of(context).viewInsets,
+                  duration: const Duration(milliseconds: 100),
+                  curve: Curves.decelerate,
+                  child: Container(
+                    height: 200,
+                    color: Colors.white,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const Text('Please confirm your password below:'),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: 350,
+                            child: TextField(
+                              controller: _confirm,
+                              obscureText: true,
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: 'Password',
+                                errorText:
+                                    _validate ? null : 'Passwords must match',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ButtonTheme(
+                            minWidth: 350.0,
+                            height: 50,
+                            child: MaterialButton(
+                                color: Colors.blue,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18.0),
+                                    side: const BorderSide(color: Colors.blue)),
+                                child: const Text(
+                                  'Confirm',
+                                  style: TextStyle(
+                                      fontSize: 17, color: Colors.white),
+                                ),
+                                onPressed: () async {
+                                  if (_confirm.text == _password.text) {
+                                    user.signUp(_email.text, _password.text);
+                                    printSanckBar('Successfully Signed up!');
+                                    Navigator.pop(context);
+                                    Navigator.pop(context);
+                                  } else {
+                                    setState(() {
+                                      _validate = false;
+                                      FocusScope.of(context)
+                                          .requestFocus(FocusNode());
+                                    });
+                                  }
+                                }),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          child: const Text('New user? Click to sign up',
+              style: TextStyle(fontSize: 20, color: Colors.white)),
+        ),
+      ),
+    );
+
+    var headerText = const Text(
+      "Welcome to Startup Names Generator \n Please log in below",
+      style: TextStyle(
+        fontSize: 16,
+      ),
+      textAlign: TextAlign.center,
+    );
+
+    var emailField = TextField(
+      controller: _email,
+      obscureText: false,
+      decoration: const InputDecoration(hintText: "Email"),
+    );
+
+    var passwordField = TextField(
+      controller: _password,
+      obscureText: true,
+      decoration: const InputDecoration(hintText: "Password"),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -297,31 +408,24 @@ class _LoginState extends State<Login> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              const Text(
-                "Welcome to Startup Names Generator \n Please log in below",
-                style: TextStyle(
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              headerText,
               const SizedBox(height: 20),
-              TextField(
-                controller: _email,
-                obscureText: false,
-                decoration: const InputDecoration(hintText: "Email"),
-              ),
+              emailField,
               const SizedBox(height: 20),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                decoration: const InputDecoration(hintText: "Password"),
-              ),
+              passwordField,
               const SizedBox(height: 20),
-              submit
+              signInButton,
+              const SizedBox(height: 10),
+              signUpButton
             ],
           ),
         ),
       ),
     );
+  }
+
+  void printSanckBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
