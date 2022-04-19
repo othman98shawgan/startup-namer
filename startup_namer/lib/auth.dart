@@ -26,6 +26,26 @@ class AuthRepository with ChangeNotifier {
 
   List<WordPair> get starred => _starred;
 
+  Future<UserCredential?> signUp(String email, String password) async {
+    try {
+      _status = Status.Authenticating;
+      notifyListeners();
+      var res = await _auth.createUserWithEmailAndPassword(
+          email: email, password: password);
+      _starred = await retrieveStarred();
+      await addUser();
+
+      //TODO: add profile picture.
+      _status = Status.Authenticated;
+      return res;
+    } catch (e) {
+      print(e);
+      _status = Status.Unauthenticated;
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<bool> signIn(String email, String password) async {
     try {
       _status = Status.Authenticating;
@@ -132,5 +152,9 @@ class AuthRepository with ChangeNotifier {
         ]),
       });
     }
+  }
+
+  String? getUserEmail() {
+    return _auth.currentUser?.email;
   }
 }
