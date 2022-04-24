@@ -1,12 +1,13 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-//import 'package:startup_namer/app_user.dart';
 import 'package:startup_namer/auth.dart';
 import 'package:snapping_sheet/snapping_sheet.dart';
+import 'package:file_picker/file_picker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,13 +71,13 @@ class _RandomWordsState extends State<RandomWords> {
   var _saved = <WordPair>[];
   final _biggerFont = const TextStyle(fontSize: 18);
   SnappingSheetController _sheetController = SnappingSheetController();
-
+  var isDraggable = true;
+  var isBlured = false;
   var _user;
 
   @override
   Widget build(BuildContext context) {
     _user = Provider.of<AuthRepository>(context);
-    var isDraggable = true;
 
     var signedInOutIcon = _user.status == Status.Authenticated
         ? const Icon(Icons.exit_to_app)
@@ -116,103 +117,187 @@ class _RandomWordsState extends State<RandomWords> {
       //body: _buildSuggestions(),
 
       body: GestureDetector(
-          child: SnappingSheet(
-            controller: _sheetController,
-            snappingPositions: const [
-              // SnappingPosition.pixels(
-              //     positionPixels: 190,
-              //     snappingCurve: Curves.bounceOut,
-              //     snappingDuration: Duration(milliseconds: 350)),
-              SnappingPosition.factor(
-                  positionFactor: 0.083,
-                  snappingCurve: Curves.bounceOut,
-                  snappingDuration: Duration(milliseconds: 350)),
-
-              SnappingPosition.factor(
-                  positionFactor: 1.0,
-                  snappingCurve: Curves.easeInBack,
-                  snappingDuration: Duration(milliseconds: 1)),
+        child: SnappingSheet(
+          controller: _sheetController,
+          onSnapCompleted: (sheetPosition, snappingPosition) {
+            if (sheetPosition.relativeToSheetHeight == 0.083) {
+              isBlured = true;
+            } else {
+              isBlured = false;
+            }
+          },
+          onSheetMoved: (sheetPosition) {
+            if (sheetPosition.relativeToSheetHeight == 0.083) {
+              isBlured = true;
+            } else {
+              isBlured = false;
+            }
+          },
+          snappingPositions: const [
+            SnappingPosition.factor(
+                positionFactor: 0.083,
+                snappingCurve: Curves.bounceOut,
+                snappingDuration: Duration(milliseconds: 350)),
+            SnappingPosition.pixels(
+                positionPixels: 190,
+                snappingCurve: Curves.bounceOut,
+                snappingDuration: Duration(milliseconds: 350)),
+            // SnappingPosition.factor(
+            //     positionFactor: 1.0,
+            //     snappingCurve: Curves.easeInBack,
+            //     snappingDuration: Duration(milliseconds: 1)),
+          ],
+          lockOverflowDrag: true,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              _buildSuggestions(),
+              // BackdropFilter(
+              //   filter: ui.ImageFilter.blur(
+              //     sigmaX: 5,
+              //     sigmaY: 5,
+              //   ),
+              //   child: isBlured && _user.status == Status.Authenticated
+              //       ? Container(
+              //           color: Colors.transparent,
+              //         )
+              //       : null,
+              // )
             ],
-            lockOverflowDrag: true,
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                _buildSuggestions(),
-                // BackdropFilter(
-                //   filter: ui.ImageFilter.blur(
-                //     sigmaX: 5,
-                //     sigmaY: 5,
-                //   ),
-                //   child: //canDrag &&
-                //       _user.status == Status.Authenticated
-                //           ? Container(
-                //               color: Colors.transparent,
-                //             )
-                //           : null,
-                // )
-              ],
-            ),
-            sheetBelow: _user.isAuthenticated
-                ? SnappingSheetContent(
-                    draggable: isDraggable,
-                    child: Container(
-                      color: Colors.white,
-                      child: ListView(
+          ),
+          sheetBelow: _user.isAuthenticated
+              ? SnappingSheetContent(
+                  draggable: isDraggable,
+                  child: Container(
+                    color: Colors.white,
+                    child: ListView(
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          Row(children: <Widget>[
-                            Expanded(
-                              child: Container(
-                                color: Colors.black12,
-                                height: 60,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.max,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: <Widget>[
-                                    Flexible(
-                                        flex: 3,
-                                        child: Center(
-                                          child: Text(
-                                              "Welcome back, " +
-                                                  _user.getUserEmail(),
-                                              style: const TextStyle(
-                                                  fontSize: 16.0)),
-                                        )),
-                                    const IconButton(
-                                      icon: Icon(Icons.keyboard_arrow_up),
-                                      onPressed: null,
-                                    ),
-                                  ],
+                          Column(children: [
+                            Row(children: <Widget>[
+                              Expanded(
+                                child: Container(
+                                  color: Colors.black12,
+                                  height: 60,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      Flexible(
+                                          flex: 3,
+                                          child: Center(
+                                            child: Text(
+                                                "Welcome back, " +
+                                                    _user.getUserEmail(),
+                                                style: const TextStyle(
+                                                    fontSize: 16.0)),
+                                          )),
+                                      const IconButton(
+                                        icon: Icon(Icons.keyboard_arrow_up),
+                                        onPressed: null,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                            ]),
+                            const Padding(padding: EdgeInsets.all(8)),
+                            Row(children: <Widget>[
+                              const Padding(padding: EdgeInsets.all(8)),
+                              FutureBuilder(
+                                future: _user.getImage(),
+                                builder: (BuildContext context,
+                                    AsyncSnapshot<String> snapshot) {
+                                  return CircleAvatar(
+                                    radius: 50.0,
+                                    backgroundImage: snapshot.data != null
+                                        ? NetworkImage(snapshot.data ?? "")
+                                        : null,
+                                  );
+                                },
+                              ),
+                              const Padding(padding: EdgeInsets.all(10)),
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(_user.getUserEmail(),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.normal,
+                                            fontSize: 20)),
+                                    const Padding(padding: EdgeInsets.all(3)),
+                                    MaterialButton(
+                                      //Change avatar button
+                                      onPressed: () async {
+                                        FilePickerResult? result =
+                                            await FilePicker.platform.pickFiles(
+                                          type: FileType.custom,
+                                          allowedExtensions: [
+                                            'png',
+                                            'jpg',
+                                            'gif',
+                                            'bmp',
+                                            'jpeg',
+                                            'webp'
+                                          ],
+                                        );
+                                        File file;
+                                        if (result != null) {
+                                          file = File(
+                                              result.files.single.path ?? "");
+                                          _user.uploadImage(file);
+                                        } else {
+                                          //Do nothing
+                                        }
+                                      },
+                                      textColor: Colors.white,
+                                      padding: const EdgeInsets.only(
+                                          left: 5.0,
+                                          top: 3.0,
+                                          bottom: 5.0,
+                                          right: 8.0),
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: <Color>[
+                                              Colors.deepPurple,
+                                              Colors.blueAccent,
+                                            ],
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            15, 7, 15, 7),
+                                        child: const Text('Change Avatar',
+                                            style: TextStyle(fontSize: 15)),
+                                      ),
+                                    ),
+                                  ])
+                            ]),
                           ]),
-                        ],
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          onTap: () => {
-                setState(() {
-                  if (isDraggable == false) {
-                    isDraggable = true;
-                    _sheetController
-                        .snapToPosition(const SnappingPosition.factor(
-                      positionFactor: 0.265,
-                    ));
-                  } else {
-                    isDraggable = false;
-                    _sheetController.snapToPosition(
-                        const SnappingPosition.factor(
-                            positionFactor: 0.083,
-                            snappingCurve: Curves.easeInBack,
-                            snappingDuration: Duration(milliseconds: 1)));
-                  }
-                })
-              }),
+                        ]),
+                  ),
+                )
+              : null,
+        ),
+        onTap: () => {
+          setState(() {
+            if (isDraggable == false) {
+              isDraggable = true;
+              _sheetController.snapToPosition(const SnappingPosition.factor(
+                positionFactor: 0.265,
+              ));
+            } else {
+              isDraggable = false;
+              _sheetController.snapToPosition(const SnappingPosition.factor(
+                  positionFactor: 0.083,
+                  snappingCurve: Curves.easeInBack,
+                  snappingDuration: Duration(milliseconds: 1)));
+            }
+          })
+        },
+      ),
     );
   }
 

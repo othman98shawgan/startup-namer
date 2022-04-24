@@ -2,13 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 enum Status { Uninitialized, Authenticated, Authenticating, Unauthenticated }
 
 class AuthRepository with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   FirebaseAuth _auth;
   User? _user;
+
   Status _status = Status.Uninitialized;
   List<WordPair> _starred = [];
 
@@ -30,13 +34,19 @@ class AuthRepository with ChangeNotifier {
     try {
       _status = Status.Authenticating;
       notifyListeners();
+
       var res = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
+
       _starred = await retrieveStarred();
       await addUser();
 
-      //TODO: add profile picture.
+      var defaultPic =
+          "https://firebasestorage.googleapis.com/v0/b/hellome-e1b8e.appspot.com/o/blank-profile-picture.png?alt=media&token=6254302c-3909-49b8-8428-b1ef8174e8f0";
+      await _auth.currentUser?.updatePhotoURL(defaultPic);
+
       _status = Status.Authenticated;
+
       return res;
     } catch (e) {
       print(e);
@@ -52,7 +62,7 @@ class AuthRepository with ChangeNotifier {
       notifyListeners();
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       await addUser();
-      await uploadStarred(); //note that these starred are just locally starred SO FAR.
+      await uploadStarred();
       _starred = await retrieveStarred();
       _status = Status.Authenticated;
       return true;
@@ -156,5 +166,24 @@ class AuthRepository with ChangeNotifier {
 
   String? getUserEmail() {
     return _auth.currentUser?.email;
+  }
+
+  Future<void> uploadImage(File file) async {
+    var currUser = _auth.currentUser;
+    await _storage.ref('Images').child(currUser?.uid ?? "").putFile(file);
+
+    var picUrl = await _storage
+        .ref('Images')
+        .child(currUser?.uid ?? "")
+        .getDownloadURL();
+
+    await currUser?.updatePhotoURL(picUrl);
+    notifyListeners();
+  }
+
+  Future<String> getImage() async {
+    var defaultPic =
+        "https://firebasestorage.googleapis.com/v0/b/hellome-e1b8e.appspot.com/o/blank-profile-picture.png?alt=media&token=6254302c-3909-49b8-8428-b1ef8174e8f0";
+    return _auth.currentUser?.photoURL ?? defaultPic;
   }
 }
