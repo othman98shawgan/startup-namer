@@ -142,10 +142,6 @@ class _RandomWordsState extends State<RandomWords> {
                 positionPixels: 190,
                 snappingCurve: Curves.bounceOut,
                 snappingDuration: Duration(milliseconds: 350)),
-            // SnappingPosition.factor(
-            //     positionFactor: 1.0,
-            //     snappingCurve: Curves.easeInBack,
-            //     snappingDuration: Duration(milliseconds: 1)),
           ],
           lockOverflowDrag: true,
           child: Stack(
